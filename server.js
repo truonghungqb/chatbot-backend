@@ -4,13 +4,12 @@ const bodyParser = require('body-parser');
 const { Configuration, OpenAIApi } = require('openai');
 
 const app = express();
-
-// ✅ Bật CORS để frontend từ AZDIGI gọi qua được
-app.use(cors());
-app.use(bodyParser.json());
+app.use(cors()); // ✅ Cho phép frontend từ domain khác gọi API
+app.use(bodyParser.json()); // ✅ Đọc JSON từ body
 
 app.post('/api/chat', async (req, res) => {
   const userMessage = req.body.message;
+
   try {
     const configuration = new Configuration({
       apiKey: process.env.OPENAI_API_KEY,
@@ -19,14 +18,24 @@ app.post('/api/chat', async (req, res) => {
     const openai = new OpenAIApi(configuration);
 
     const completion = await openai.createChatCompletion({
-      model: 'gpt-3.5-turbo',
-      messages: [{ role: 'user', content: userMessage }],
+      model: "gpt-3.5-turbo",
+      messages: [{ role: "user", content: userMessage }],
     });
 
-    const reply = completion.data.choices[0].message.content;
+    const reply = completion?.data?.choices?.[0]?.message?.content;
+    
+    if (!reply) {
+      return res.status(500).json({
+        reply: "❌ GPT không trả lời! Có thể do API key sai, hết hạn hoặc cấu hình sai!"
+      });
+    }
+
     res.json({ reply });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+
+  } catch (err) {
+    res.status(500).json({
+      reply: `❌ Lỗi server: ${err.message}`
+    });
   }
 });
 
